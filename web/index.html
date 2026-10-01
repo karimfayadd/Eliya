@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Eliya — Network Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#2d333b;
+  --border:#30363d;--border2:#444c56;
+  --text:#e6edf3;--text2:#8b949e;--text3:#656d76;
+  --cyan:#58a6ff;--green:#3fb950;--red:#f85149;
+  --yellow:#e3b341;--purple:#bc8cff;--orange:#d29922;
+  --accent:#238636;--accent-hover:#2ea043;
+  --radius:6px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --sidebar-w:260px;--details-w:340px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;
+     display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── toolbar ── */
+#toolbar{background:var(--bg2);border-bottom:1px solid var(--border);
+         display:flex;align-items:center;gap:5px;padding:7px 12px;flex-shrink:0;flex-wrap:wrap}
+.brand{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--cyan);
+       letter-spacing:.5px;margin-right:4px;white-space:nowrap}
+.brand span{color:var(--text2);font-size:10px;margin-left:4px;font-weight:400}
+.tb-sep{width:1px;height:20px;background:var(--border);margin:0 3px}
+.btn{display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--bg3);
+     border:1px solid var(--border);border-radius:var(--radius);color:var(--text);
+     cursor:pointer;font-size:12px;font-family:var(--font);transition:all .15s;white-space:nowrap;
+     user-select:none}
+.btn:hover{background:var(--bg4);border-color:var(--border2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.danger{border-color:#6e2222}
+.btn.danger:hover{background:#2d1b1b;border-color:var(--red);color:var(--red)}
+.btn.arp{border-color:#2a4a2a}
+.btn.arp:hover{background:#1a2e1a;border-color:var(--green);color:var(--green)}
+.btn.cut-active{background:#2d1b1b;border-color:var(--red);color:var(--red)}
+.btn.cut-active:hover{background:#3d1b1b}
+.btn.monitor{border-color:#1a3a4a;position:relative}
+.btn.monitor.active{background:#0d2433;border-color:var(--cyan);color:var(--cyan)}
+.btn.monitor.active::after{content:'';position:absolute;top:4px;right:4px;
+  width:6px;height:6px;border-radius:50%;background:var(--cyan);
+  animation:pulse 1.4s ease-in-out infinite}
+.btn.traffic-btn{border-color:#2a3a2a}
+.btn.traffic-btn.active{background:#0d2016;border-color:var(--green);color:var(--green)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+.btn svg{width:13px;height:13px;flex-shrink:0}
+select.tb-select{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text);padding:5px 8px;font-size:12px;font-family:var(--font);cursor:pointer}
+select.tb-select:hover{border-color:var(--border2)}
+.spacer{flex:1}
+
+/* ── main area ── */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ── sidebar ── */
+#sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);
+         display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+#sidebar-header{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+#sidebar-header h3{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;
+                   letter-spacing:.6px;margin-bottom:8px}
+.filter-btns{display:flex;gap:3px;flex-wrap:wrap}
+.filter-btn{padding:3px 7px;border-radius:var(--radius);background:var(--bg3);
+            border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:10px;
+            transition:all .15s}
+.filter-btn.active{background:var(--bg4);border-color:var(--border2);color:var(--text)}
+.filter-btn:hover{color:var(--text)}
+#search-box{width:100%;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);
+            border-radius:var(--radius);color:var(--text);font-size:12px;font-family:var(--font);
+            margin-top:7px}
+#search-box::placeholder{color:var(--text3)}
+#search-box:focus{outline:none;border-color:var(--border2)}
+#asset-list{flex:1;overflow-y:auto;padding:5px}
+#asset-list::-webkit-scrollbar{width:4px}
+#asset-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.asset-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--radius);
+            cursor:pointer;transition:background .12s;margin-bottom:1px;position:relative}
+.asset-item:hover{background:var(--bg3)}
+.asset-item.selected{background:var(--bg4);border-left:2px solid var(--cyan)}
+.asset-item.offline{opacity:.45}
+.asset-item.new-device{animation:flashNew .8s ease-out}
+.asset-item.is-cut{border-left:2px solid var(--red)!important}
+@keyframes flashNew{0%{background:#0d3320}100%{background:transparent}}
+.asset-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.asset-info{flex:1;min-width:0}
+.asset-ip{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;
+          overflow:hidden;text-overflow:ellipsis}
+.asset-meta{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;
+            text-overflow:ellipsis;margin-top:1px}
+.asset-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.asset-badge{font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:3px;
+             background:var(--bg3);border:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.asset-speed{font-family:var(--mono);font-size:9px;color:var(--green);white-space:nowrap}
+.asset-speed.has-traffic{color:var(--cyan)}
+.offline-tag{font-size:9px;color:var(--text3);background:var(--bg);border:1px solid var(--border);
+             padding:1px 4px;border-radius:3px;flex-shrink:0}
+.cut-tag{font-size:9px;color:var(--red);background:#1a0a0a;border:1px solid #5a1a1a;
+         padding:1px 4px;border-radius:3px;flex-shrink:0}
+.device-icon{font-size:12px;flex-shrink:0;line-height:1}
+
+/* ── graph ── */
+#cy-container{flex:1;position:relative;background:radial-gradient(ellipse at center,#0d1a2a 0%,var(--bg) 70%)}
+#cy{width:100%;height:100%}
+.empty-state{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+             text-align:center;pointer-events:none}
+.empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.3}
+.empty-state p{color:var(--text2);font-size:13px;margin-bottom:4px}
+.empty-state small{color:var(--text3);font-size:11px}
+
+/* ── legend ── */
+#legend{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+        background:rgba(13,17,23,.9);border:1px solid var(--border);border-radius:var(--radius);
+        padding:5px 10px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none;
+        backdrop-filter:blur(6px)}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text2)}
+.leg-dot{width:8px;height:8px;border-radius:2px}
+
+/* ── details panel — fixed overlay drawer ── */
+#dp-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+#dp-backdrop.visible{display:block}
+#details-panel{
+  position:fixed;top:0;right:-420px;bottom:0;
+  width:400px;max-width:calc(100vw - 16px);
+  background:var(--bg2);border-left:1px solid var(--border2);
+  display:flex;flex-direction:column;overflow:hidden;
+  z-index:100;transition:right .22s cubic-bezier(.4,0,.2,1);
+  box-shadow:-6px 0 32px rgba(0,0,0,.55)
+}
+#details-panel.visible{right:0}
+#details-panel::-webkit-scrollbar{width:4px}
+#details-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* header */
+.dp-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;
+           align-items:center;gap:10px;flex-shrink:0;background:var(--bg3)}
+#dp-indicator{width:12px;height:12px;border-radius:50%;flex-shrink:0;
+              background:var(--text3);box-shadow:0 0 6px currentColor}
+#dp-title{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dp-subtitle{font-size:10px;color:var(--text3);margin-top:2px}
+.dp-close{background:none;border:none;color:var(--text3);cursor:pointer;
+          font-size:20px;line-height:1;padding:4px;flex-shrink:0;border-radius:4px}
+.dp-close:hover{color:var(--text);background:var(--bg4)}
+
+/* quick-action bar */
+.dp-actions-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+                border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.dp-action-btn{display:flex;flex-direction:column;align-items:center;gap:4px;
+               padding:10px 4px;background:none;border:none;border-right:1px solid var(--border);
+               color:var(--text2);cursor:pointer;transition:background .12s;user-select:none}
+.dp-action-btn:last-child{border-right:none}
+.dp-action-btn:hover{background:var(--bg3);color:var(--text)}
+.dp-action-btn.active{background:var(--bg4);color:var(--cyan)}
+.dp-action-btn.active.sniff{color:var(--green)}
+.dp-action-btn.danger{color:var(--red)}
+.dp-action-btn.danger:hover{background:#1a0a0a}
+.dpa-icon{font-size:16px;line-height:1}
+.dpa-lbl{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+
+/* MITM live feed */
+.mitm-badge{display:inline-flex;align-items:center;gap:5px;background:#0a1f0a;
+            border:1px solid var(--green);border-radius:4px;padding:4px 8px;
+            font-size:10px;color:var(--green);font-weight:600;margin-bottom:10px}
+.mitm-badge::before{content:'';width:7px;height:7px;border-radius:50%;
+                    background:var(--green);animation:pulse 1.4s ease-in-out infinite}
+.mitm-feed{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto}
+.mitm-feed::-webkit-scrollbar{width:3px}
+.mitm-feed::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.mitm-entry{display:grid;grid-template-columns:52px 1fr 44px;gap:4px;align-items:start;
+            padding:4px 6px;border-radius:4px;background:var(--bg3);font-size:10px;
+            transition:background .3s}
+.mitm-entry.new{background:#0a1f0a}
+.mitm-proto{font-size:8px;font-weight:700;padding:2px 4px;border-radius:3px;
+            text-align:center;letter-spacing:.3px;flex-shrink:0}
+.mitm-proto.https{background:#0d2433;color:var(--cyan)}
+.mitm-proto.http{background:#2a1e00;color:var(--yellow)}
+.mitm-proto.dns{background:#1a0a2a;color:var(--purple)}
+.mitm-proto.ssh{background:#1a2a0a;color:var(--green)}
+.mitm-domain{color:var(--text);font-family:var(--mono);word-break:break-all;overflow:hidden;
+             text-overflow:ellipsis;white-space:nowrap}
+.mitm-time{font-size:9px;color:var(--text3);font-family:var(--mono);text-align:right}
+.mitm-empty{color:var(--text3);font-size:10px;padding:8px 0;font-style:italic;text-align:center}
+.mitm-http-path{color:var(--text3);font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mitm-http-referer{color:var(--purple);font-size:9px;margin-left:6px;opacity:.75}
+
+/* tabs */
+.dp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.dp-tab{flex:1;padding:7px 4px;text-align:center;font-size:10px;color:var(--text3);
+        cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;
+        user-select:none;white-space:nowrap}
+.dp-tab:hover{color:var(--text2)}
+.dp-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+.dp-pane{flex:1;overflow-y:auto;padding:12px 14px;display:none}
+.dp-pane.active{display:block}
+.dp-pane::-webkit-scrollbar{width:4px}
+.dp-pane::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.dp-section{margin-bottom:14px}
+.dp-section h4{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;
+               letter-spacing:.6px;margin-bottom:7px;padding-bottom:4px;
+               border-bottom:1px solid var(--border)}
+.dp-grid{display:grid;grid-template-columns:80px 1fr;gap:4px 8px}
+.dp-lbl{color:var(--text3);font-size:11px;align-self:start;padding-top:2px}
+.dp-val{color:var(--text);font-size:11px;font-family:var(--mono);word-break:break-all}
+.dp-val.vendor{font-family:var(--font);color:var(--text2)}
+.risk-bar-wrap{margin-top:6px}
+.risk-bar-bg{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;margin-top:4px}
+.risk-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.port-list{display:flex;flex-direction:column;gap:3px}
+.port-item{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg3);
+           border-radius:4px;font-family:var(--mono);font-size:11px}
+.port-num{min-width:38px;font-weight:600}
+.port-svc{color:var(--text2);flex:1}
+.port-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.event-list{display:flex;flex-direction:column;gap:3px}
+.event-item{display:flex;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px}
+.event-time{color:var(--text3);font-family:var(--mono);flex-shrink:0;font-size:10px}
+.event-type{color:var(--cyan)}
+.event-type.left{color:var(--text3)}
+.vuln-item{padding:5px 8px;background:#2d1b1b;border-left:2px solid var(--red);
+           border-radius:0 4px 4px 0;margin-bottom:4px;font-size:11px}
+.vuln-cve{font-family:var(--mono);color:var(--red);font-size:10px;margin-bottom:2px}
+.dp-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.dp-actions .btn{flex:1;justify-content:center}
+textarea.notes{width:100%;background:var(--bg3);border:1px solid var(--border);
+               border-radius:var(--radius);color:var(--text);padding:8px;font-size:11px;
+               font-family:var(--mono);resize:vertical;min-height:60px;max-height:100px}
+textarea.notes:focus{outline:none;border-color:var(--border2)}
+
+/* traffic tab */
+.traffic-meter{background:var(--bg3);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px}
+.traffic-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.traffic-label{font-size:11px;color:var(--text3)}
+.traffic-val{font-family:var(--mono);font-size:12px;font-weight:600}
+.traffic-val.in{color:var(--cyan)}
+.traffic-val.out{color:var(--green)}
+.traffic-bar{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:2px}
+.traffic-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+
+/* websites / dns tab */
+.dns-item{display:flex;gap:8px;align-items:baseline;padding:4px 6px;border-radius:4px;
+          background:var(--bg3);margin-bottom:2px;font-size:11px}
+.dns-domain{flex:1;font-family:var(--mono);color:var(--text);word-break:break-all}
+.dns-time{font-size:9px;color:var(--text3);flex-shrink:0;font-family:var(--mono)}
+.dns-type{font-size:9px;padding:1px 4px;border-radius:3px;
+          background:var(--bg4);color:var(--text2);flex-shrink:0}
+.dns-type.sni{color:var(--cyan);border:1px solid #1a3a5a}
+.dns-empty{color:var(--text3);font-size:11px;padding:8px 0;font-style:italic}
+
+/* control tab */
+.ctrl-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+           padding:12px;margin-bottom:10px}
+.ctrl-card h5{font-size:11px;color:var(--text);margin-bottom:8px;font-weight:600}
+.ctrl-card p{font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5}
+.ctrl-card .btn{width:100%;justify-content:center}
+
+/* ── spoof UI ── */
+.spoof-card{border-color:#b45309}
+.spoof-form{display:flex;flex-direction:column;gap:4px}
+.spoof-input{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;
+             color:var(--text);font-size:10px;padding:5px 8px;font-family:var(--mono);
+             outline:none;width:100%;box-sizing:border-box}
+.spoof-input:focus{border-color:var(--yellow)}
+.spoof-html{min-height:52px;resize:vertical}
+.spoof-rules-list{margin-top:8px;display:flex;flex-direction:column;gap:3px}
+.spoof-rule-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;
+                gap:6px;background:var(--bg2);border:1px solid var(--border);
+                border-radius:4px;padding:4px 6px;font-size:10px}
+.spoof-rule-domain{color:var(--yellow);font-family:var(--mono);font-weight:600}
+.spoof-rule-target{color:var(--text3);font-family:var(--mono);overflow:hidden;
+                   text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.spoof-del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;
+               padding:0 2px;line-height:1}
+.spoof-del-btn:hover{opacity:.7}
+.spoof-empty{color:var(--text3);font-size:10px;font-style:italic;padding:4px 0}
+.spoof-warn{background:#2a1500;border:1px solid #b45309;border-radius:4px;
+            padding:5px 8px;font-size:9px;color:#f0a030;margin-bottom:6px}
+
+/* ── status bar ── */
+#statusbar{background:var(--bg2);border-top:1px solid var(--border);padding:4px 12px;
+           display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text3);flex-shrink:0}
+.sb-item{display:flex;align-items:center;gap:4px}
+.sb-dot{width:6px;height:6px;border-radius:50%}
+.sb-dot.green{background:var(--green)}
+.sb-dot.yellow{background:var(--yellow)}
+.sb-dot.gray{background:var(--text3)}
+.sb-dot.live{background:var(--cyan);animation:pulse 1.4s ease-in-out infinite}
+#statusbar .spacer{flex:1}
+#statusbar a{color:var(--text3);text-decoration:none}
+#statusbar a:hover{color:var(--text)}
+
+/* ── toasts ── */
+#toast-container{position:fixed;top:50px;right:16px;z-index:9999;
+                 display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{padding:8px 14px;border-radius:var(--radius);font-size:12px;min-width:180px;max-width:300px;
+       border:1px solid;animation:toastIn .25s ease;backdrop-filter:blur(8px)}
+.toast.info  {background:rgba(22,27,34,.95);border-color:var(--border);color:var(--text)}
+.toast.success{background:rgba(14,30,14,.95);border-color:var(--green);color:var(--green)}
+.toast.error {background:rgba(45,14,14,.95);border-color:var(--red);color:var(--red)}
+.toast.warning{background:rgba(45,35,0,.95);border-color:var(--yellow);color:var(--yellow)}
+.toast.join  {background:rgba(10,28,20,.95);border-color:var(--green);color:var(--green)}
+.toast.leave {background:rgba(35,25,5,.95);border-color:var(--yellow);color:var(--yellow)}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+
+/* ── modals ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:8000;
+               display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+       padding:20px;width:440px;max-width:90vw}
+.modal h3{font-size:14px;margin-bottom:12px;color:var(--text)}
+.modal label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;margin-top:10px}
+.modal input{width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);
+             border-radius:var(--radius);color:var(--text);font-size:12px;font-family:var(--mono)}
+.modal input:focus{outline:none;border-color:var(--cyan)}
+.modal-hint{font-size:10px;color:var(--text3);margin-top:4px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.modal-actions .btn{padding:6px 16px}
+.interval-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.interval-row input[type=number]{width:80px}
+.interval-row span{font-size:11px;color:var(--text2)}
+
+/* ── scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+</style>
+</head>
+<body>
+
+<!-- toolbar -->
+<div id="toolbar">
+  <span class="brand">⬡ ELIYA <span>v3.0</span></span>
+  <div class="tb-sep"></div>
+
+  <button class="btn primary" id="btn-arp-scan" title="Fast ARP scan — instant discovery">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zM2 8a6 6 0 1112 0A6 6 0 012 8z"/><path d="M8 4a.75.75 0 01.75.75v2.5h2.5a.75.75 0 010 1.5h-2.5v2.5a.75.75 0 01-1.5 0v-2.5H4.75a.75.75 0 010-1.5h2.5v-2.5A.75.75 0 018 4z"/></svg>
+    ARP Scan
+  </button>
+
+  <button class="btn arp" id="btn-nmap-scan" title="Deep nmap scan — ports, services, OS">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.5 1a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM3 2.5a.5.5 0 01.5-.5h5a.5.5 0 010 1H5.707l6.147 6.146a.5.5 0 01-.708.708L5 3.707V6.5a.5.5 0 01-1 0v-4z"/></svg>
+    Deep Scan
+  </button>
+
+  <button class="btn" id="btn-ssdp" title="SSDP/UPnP device discovery">
+    📡 SSDP
+  </button>
+
+  <button class="btn monitor" id="btn-monitor" title="Live monitor — detects devices joining/leaving">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 5.5A2.5 2.5 0 013.5 3h9A2.5 2.5 0 0115 5.5v4A2.5 2.5 0 0112.5 12h-3v1h1.75a.75.75 0 010 1.5h-6.5a.75.75 0 010-1.5H6.5v-1h-3A2.5 2.5 0 011 9.5v-4zm2.5-1A1 1 0 002.5 5.5v4A1 1 0 003.5 11h9A1 1 0 0013.5 9.5v-4A1 1 0 0012.5 4.5h-9z"/></svg>
+    <span id="monitor-label">Monitor</span>
+  </button>
+
+  <button class="btn traffic-btn" id="btn-traffic" title="Enable live bandwidth + DNS/SNI monitoring (requires scapy + admin)">
+    📊 <span id="traffic-label">Traffic</span>
+  </button>
+
+  <div class="tb-sep"></div>
+  <button class="btn" id="btn-import" title="Import nmap XML file">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 1.75a.75.75 0 00-1.5 0V7H3.75a.75.75 0 000 1.5H7.25v5.25a.75.75 0 001.5 0V8.5h3.5a.75.75 0 000-1.5H8.75V1.75z"/></svg>
+    Import XML
+  </button>
+
+  <div class="tb-sep"></div>
+  <select class="tb-select" id="layout-select">
+    <option value="cose">Force</option>
+    <option value="breadthfirst">Tree</option>
+    <option value="concentric">Concentric</option>
+    <option value="grid">Grid</option>
+    <option value="circle">Circle</option>
+  </select>
+  <button class="btn" id="btn-fit">⊡ Fit</button>
+  <button class="btn" id="btn-export">PNG</button>
+
+  <div class="spacer"></div>
+  <button class="btn danger" id="btn-clear">✕ Clear</button>
+</div>
+
+<!-- main -->
+<div id="main">
+
+  <!-- sidebar -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h3>Assets</h3>
+      <div class="filter-btns">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="up">Online</button>
+        <button class="filter-btn" data-filter="down">Offline</button>
+        <button class="filter-btn" data-filter="camera">📷 Cams</button>
+        <button class="filter-btn" data-filter="iot">IoT</button>
+        <button class="filter-btn" data-filter="high-risk">⚠ Risk</button>
+      </div>
+      <input id="search-box" type="text" placeholder="Search IP / hostname / vendor…">
+    </div>
+    <div id="asset-list"></div>
+  </div>
+
+  <!-- graph -->
+  <div id="cy-container">
+    <div id="cy"></div>
+    <div class="empty-state" id="empty-state">
+      <div class="icon">⬡</div>
+      <p>No assets yet</p>
+      <small>Click <strong>ARP Scan</strong> for instant discovery</small>
+    </div>
+    <div id="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#b388ff"></div>DC</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#58a6ff"></div>Web</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#f85149"></div>DB</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3fb950"></div>Router</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#79c0ff"></div>Windows</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#56d364"></div>Linux</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ff6b6b"></div>📷 Camera</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ffd93d"></div>Smart Home</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#6bcb77"></div>Smart TV</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#4d96ff"></div>Speaker</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#c77dff"></div>Printer</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ff9f43"></div>Gaming</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#6e7681"></div>Unknown</div>
+    </div>
+  </div>
+
+  <!-- details panel backdrop + drawer -->
+  <div id="dp-backdrop"></div>
+  <div id="details-panel">
+
+    <!-- header: device identity -->
+    <div class="dp-header">
+      <div id="dp-indicator"></div>
+      <div style="flex:1;min-width:0">
+        <div id="dp-title"></div>
+        <div id="dp-subtitle"></div>
+      </div>
+      <button class="dp-close" id="dp-close" title="Close (Esc)">×</button>
+    </div>
+
+    <!-- quick-action bar -->
+    <div class="dp-actions-bar">
+      <button class="dp-action-btn" id="dpa-traffic" title="Watch live bandwidth for this device">
+        <span class="dpa-icon">📊</span><span class="dpa-lbl">Traffic</span>
+      </button>
+      <button class="dp-action-btn" id="dpa-websites" title="See domains this device is visiting">
+        <span class="dpa-icon">🌐</span><span class="dpa-lbl">Sites</span>
+      </button>
+      <button class="dp-action-btn sniff" id="dpa-sniff" title="Intercept all traffic (passive MITM — device keeps internet)">
+        <span class="dpa-icon" id="dpa-sniff-icon">👁</span><span class="dpa-lbl" id="dpa-sniff-lbl">Sniff</span>
+      </button>
+      <button class="dp-action-btn" id="dpa-vulns" title="Device info and vulnerabilities">
+        <span class="dpa-icon">🔍</span><span class="dpa-lbl">Vulns</span>
+      </button>
+      <button class="dp-action-btn" id="dpa-block" title="Block / Restore internet for this device">
+        <span class="dpa-icon" id="dpa-block-icon">✕</span><span class="dpa-lbl" id="dpa-block-lbl">Block</span>
+      </button>
+    </div>
+
+    <!-- tabs -->
+    <div class="dp-tabs">
+      <div class="dp-tab active" data-pane="info">ℹ Info</div>
+      <div class="dp-tab" data-pane="traffic">📊 Traffic</div>
+      <div class="dp-tab" data-pane="websites">🌐 Sites</div>
+      <div class="dp-tab" data-pane="control">⚙ Control</div>
+    </div>
+
+    <div class="dp-pane active" id="pane-info"></div>
+    <div class="dp-pane" id="pane-traffic"></div>
+    <div class="dp-pane" id="pane-websites"></div>
+    <div class="dp-pane" id="pane-control"></div>
+  </div>
+</div>
+
+<!-- status bar -->
+<div id="statusbar">
+  <div class="sb-item"><div class="sb-dot gray" id="ws-dot"></div><span id="ws-status">Connecting…</span></div>
+  <div class="tb-sep" style="height:12px"></div>
+  <span id="sb-count">0 assets</span>
+  <div class="tb-sep" style="height:12px"></div>
+  <span id="sb-scan">Idle</span>
+  <div class="spacer"></div>
+  <span id="sb-monitor" style="display:none">
+    <span style="color:var(--cyan)">● LIVE</span>
+    <span id="sb-monitor-net" style="color:var(--text3);margin-left:4px"></span>
+  </span>
+  <span id="sb-traffic-info" style="display:none;color:var(--green)">📊 traffic monitor</span>
+  <span id="sb-updated">—</span>
+  <div class="tb-sep" style="height:12px"></div>
+  <a href="https://github.com/karimfayadd" target="_blank">Karim Fayad · github.com/karimfayadd</a>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ARP Scan modal -->
+<div class="modal-overlay hidden" id="arp-modal">
+  <div class="modal">
+    <h3>ARP Scan — Instant Discovery</h3>
+    <label>Network (CIDR)</label>
+    <input id="arp-target" type="text" placeholder="192.168.1.0/24" autocomplete="off">
+    <p class="modal-hint">Detects ALL devices including cameras, IoT, smart TVs. No nmap required.<br>Requires admin/root for best results (scapy).</p>
+    <div class="modal-actions">
+      <button class="btn" id="arp-cancel">Cancel</button>
+      <button class="btn primary" id="arp-go">Scan Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- nmap scan modal -->
+<div class="modal-overlay hidden" id="scan-modal">
+  <div class="modal">
+    <h3>Deep Scan (nmap)</h3>
+    <label>Target IP, range, or CIDR</label>
+    <input id="scan-target" type="text" placeholder="192.168.1.0/24" autocomplete="off">
+    <p class="modal-hint">Discovers open ports, services & OS fingerprints. Requires nmap installed.</p>
+    <div class="modal-actions">
+      <button class="btn" id="scan-cancel">Cancel</button>
+      <button class="btn primary" id="scan-go">Scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- import modal -->
+<div class="modal-overlay hidden" id="import-modal">
+  <div class="modal">
+    <h3>Import nmap XML</h3>
+    <label>File path</label>
+    <input id="import-path" type="text" placeholder="C:\scans\network.xml" autocomplete="off">
+    <p class="modal-hint">Generate with: <code style="color:var(--cyan)">nmap -sV -oX scan.xml 192.168.1.0/24</code></p>
+    <div class="modal-actions">
+      <button class="btn" id="import-cancel">Cancel</button>
+      <button class="btn primary" id="import-go">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Monitor modal -->
+<div class="modal-overlay hidden" id="monitor-modal">
+  <div class="modal">
+    <h3>Live Monitor</h3>
+    <label>Network to monitor</label>
+    <input id="monitor-network" type="text" placeholder="192.168.1.0/24" autocomplete="off">
+    <label>Check interval</label>
+    <div class="interval-row">
+      <input id="monitor-interval" type="number" value="30" min="10" max="300">
+      <span>seconds</span>
+    </div>
+    <p class="modal-hint">Continuously scans and alerts when devices join or leave the network.</p>
+    <div class="modal-actions">
+      <button class="btn" id="monitor-cancel">Cancel</button>
+      <button class="btn primary" id="monitor-go">Start Monitoring</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PORT_COLORS = {
+  22:'#3fb950',23:'#e3b341',21:'#e3b341',
+  80:'#58a6ff',443:'#58a6ff',8080:'#58a6ff',8443:'#58a6ff',
+  3306:'#f85149',5432:'#f85149',1433:'#f85149',27017:'#f85149',
+  6379:'#f85149',5984:'#f85149',1521:'#f85149',
+  445:'#e3b341',139:'#e3b341',135:'#e3b341',
+  3389:'#f0883e',5900:'#f0883e',
+  389:'#bc8cff',636:'#bc8cff',88:'#bc8cff',3268:'#bc8cff',
+  25:'#8b949e',110:'#8b949e',143:'#8b949e',587:'#8b949e',
+  554:'#ff6b6b',8554:'#ff6b6b',1935:'#ff6b6b',
+};
+
+const DEVICE_COLORS = {
+  domain_controller:'#b388ff',web_server:'#58a6ff',database:'#f85149',
+  router:'#3fb950',gateway:'#3fb950',linux_server:'#56d364',
+  windows:'#79c0ff',network_device:'#e3b341',server:'#58a6ff',
+  ip_camera:'#ff6b6b',smart_home:'#ffd93d',smart_tv:'#6bcb77',
+  smart_speaker:'#4d96ff',printer:'#c77dff',gaming:'#ff9f43',
+  iot:'#f9c74f',subnet:'#21262d',unknown:'#6e7681',
+};
+
+const DEVICE_ICONS = {
+  ip_camera:'📷',smart_home:'🏠',smart_tv:'📺',smart_speaker:'🔊',
+  printer:'🖨',gaming:'🎮',router:'📡',gateway:'📡',
+  domain_controller:'🔰',web_server:'🌐',database:'🗄',
+  windows:'💻',linux_server:'🐧',network_device:'🔌',iot:'📟',
+  server:'🖥',unknown:'❓',
+};
+
+const RISK_COLOR = r => r >= 70 ? '#f85149' : r >= 40 ? '#e3b341' : '#3fb950';
+
+const LAYOUTS = {
+  cose:{name:'cose',animate:false,nodeOverlap:20,gravity:.25,idealEdgeLength:80,
+        randomize:false,componentSpacing:60,nodeRepulsion:4500},
+  breadthfirst:{name:'breadthfirst',animate:false,spacingFactor:1.4,directed:false,
+                roots:'[device_type = "subnet"]',padding:30},
+  concentric:{name:'concentric',animate:false,spacingFactor:1.5,padding:30},
+  grid:{name:'grid',animate:false,padding:30},
+  circle:{name:'circle',animate:false,padding:30},
+};
+
+let cy, allAssets = {}, selectedIp = null, activeFilter = 'all', activeTab = 'info';
+let monitorActive = false, monitorNetwork = '';
+let trafficActive = false;
+let _detectedNet = null;
+let wsRetries = 0;
+let trafficData = {};   // {ip: {in, out, bi, bo}}
+let mitmIPs = new Set();  // IPs currently being passive-MITM'd
+
+// ── graph ─────────────────────────────────────────────────────────────────────
+function initGraph() {
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    style: [
+      {selector:'node',
+       style:{'background-color':'data(color)','width':'data(size)',
+              'height':'data(size)','shape':'data(shape)','border-width':1,
+              'border-color':'#30363d','label':'data(label)',
+              'color':'#8b949e','font-size':9,'font-family':'JetBrains Mono,monospace',
+              'text-valign':'bottom','text-halign':'center',
+              'text-margin-y':3,'text-background-opacity':.7,
+              'text-background-color':'#0d1117','text-background-padding':2}},
+      {selector:'node[?virtual]',
+       style:{'background-color':'#0d1a2a','border-style':'dashed','border-color':'#30363d',
+              'width':110,'height':32,'text-valign':'center','font-size':8,'color':'#444c56'}},
+      {selector:'node[?offline]',
+       style:{'background-color':'#1a1a1a','border-color':'#3d3d3d','opacity':.5}},
+      {selector:'node[?is_cut]',
+       style:{'border-color':'#f85149','border-width':2,'border-style':'dashed'}},
+      {selector:'node[?is_mitm]',
+       style:{'border-color':'#3fb950','border-width':3,'border-style':'double'}},
+      {selector:'node:selected',
+       style:{'border-color':'#58a6ff','border-width':2,'color':'#e6edf3'}},
+      {selector:'edge',
+       style:{'width':1,'line-color':'#21262d','curve-style':'bezier','target-arrow-shape':'none'}},
+      {selector:'.faded',style:{opacity:.1}},
+      {selector:'.highlighted',style:{'border-width':2,'border-color':'#58a6ff'}},
+    ],
+    wheelSensitivity:.3, minZoom:.08, maxZoom:4, elements:[],
+  });
+
+  cy.on('tap','node', e => {
+    const d = e.target.data();
+    if (d.virtual) return;
+    selectAsset(d.ip || d.id);
+    highlightNode(e.target);
+  });
+  cy.on('tap', e => { if (e.target === cy) clearSelection(); });
+}
+
+function renderGraph(data) {
+  if (!data || !data.nodes) return;
+  cy.elements().remove();
+  const elements = [];
+  data.nodes.forEach(n => {
+    const d = n.data;
+    elements.push({group:'nodes', data:{...d,
+      size: d.virtual ? 32 : Math.max(32, Math.min(56, 32 + (d.risk_score||0)*.24)),
+    }});
+  });
+  data.edges.forEach(e => elements.push({group:'edges', data:e.data}));
+  cy.add(elements);
+  runLayout(document.getElementById('layout-select').value);
+  document.getElementById('empty-state').style.display =
+    data.nodes.length ? 'none' : 'flex';
+}
+
+function runLayout(name) { cy.layout(LAYOUTS[name]||LAYOUTS.cose).run(); }
+
+// ── sidebar ───────────────────────────────────────────────────────────────────
+function renderSidebar(assets) {
+  const q   = document.getElementById('search-box').value.toLowerCase();
+  const lst = document.getElementById('asset-list');
+  const IOT_TYPES = new Set(['ip_camera','smart_home','smart_tv','smart_speaker','printer','gaming','iot']);
+
+  const filtered = assets.filter(a => {
+    if (activeFilter === 'up'     && a.status !== 'up')   return false;
+    if (activeFilter === 'down'   && a.status !== 'down') return false;
+    if (activeFilter === 'camera' && a.device_type !== 'ip_camera') return false;
+    if (activeFilter === 'iot'    && !IOT_TYPES.has(a.device_type)) return false;
+    if (activeFilter === 'high-risk' && (a.risk_score||0) < 50) return false;
+    if (q) {
+      const hay = [a.ip,a.hostname,a.vendor,a.os,a.device_type,a.mac]
+                  .filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  lst.innerHTML = filtered.map(a => {
+    const offline = a.status === 'down';
+    const lbl = a.hostname || a.ip;
+    const sub = [a.vendor||'',a.device_type||''].filter(Boolean).join(' · ');
+    const spd = trafficData[a.ip];
+    const inKB  = spd ? fmtSpeed(spd.in)  : '';
+    const outKB = spd ? fmtSpeed(spd.out) : '';
+    const hasTraffic = spd && (spd.in > 0 || spd.out > 0);
+    const icon = DEVICE_ICONS[a.device_type] || '';
+    const isCut = a.is_cut;
+    return `<div class="asset-item${offline?' offline':''}${a.ip===selectedIp?' selected':''}${isCut?' is-cut':''}"
+                 data-ip="${a.ip}" id="si-${a.ip.replace(/\./g,'_')}">
+      <div class="asset-dot" style="background:${offline?'#3d3d3d':DEVICE_COLORS[a.device_type]||'#6e7681'}"></div>
+      ${icon ? `<span class="device-icon">${icon}</span>` : ''}
+      <div class="asset-info">
+        <div class="asset-ip">${lbl}</div>
+        <div class="asset-meta">${sub}</div>
+      </div>
+      <div class="asset-right">
+        ${isCut ? '<span class="cut-tag">BLOCKED</span>' :
+          offline ? '<span class="offline-tag">down</span>' :
+          `<span class="asset-badge">${a.risk_score||0}</span>`}
+        ${hasTraffic ? `<span class="asset-speed has-traffic">▼${inKB} ▲${outKB}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  lst.querySelectorAll('.asset-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const ip = el.dataset.ip;
+      selectAsset(ip);
+      const node = cy.$(`#${CSS.escape(ip)}`);
+      if (node.length) {
+        cy.animate({center:{eles:node},zoom:1.4},{duration:300});
+        highlightNode(node);
+      }
+    });
+  });
+
+  document.getElementById('sb-count').textContent = `${filtered.length}/${assets.length} assets`;
+}
+
+function fmtSpeed(bps) {
+  if (bps >= 1048576) return `${(bps/1048576).toFixed(1)}M`;
+  if (bps >= 1024)    return `${(bps/1024).toFixed(1)}K`;
+  return bps + 'B';
+}
+
+// ── selection & details ───────────────────────────────────────────────────────
+async function selectAsset(ip) {
+  selectedIp = ip;
+  document.querySelectorAll('.asset-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.ip === ip));
+  try {
+    const a = await fetch(`/api/assets/${encodeURIComponent(ip)}`).then(r => r.json());
+    Object.assign(allAssets[ip]||{}, a);
+    renderDetails(a);
+  } catch(e) { console.error(e); }
+}
+
+function clearSelection() {
+  selectedIp = null;
+  document.querySelectorAll('.asset-item').forEach(el => el.classList.remove('selected'));
+  document.getElementById('details-panel').classList.remove('visible');
+  document.getElementById('dp-backdrop').classList.remove('visible');
+  cy.elements().removeClass('faded highlighted');
+}
+
+function switchTab(name) {
+  activeTab = name;
+  document.querySelectorAll('.dp-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.pane === name));
+  document.querySelectorAll('.dp-pane').forEach(p =>
+    p.classList.toggle('active', p.id === `pane-${name}`));
+}
+
+function renderDetails(a) {
+  const panel = document.getElementById('details-panel');
+  panel.classList.add('visible');
+  document.getElementById('dp-backdrop').classList.add('visible');
+
+  const offline = a.status === 'down';
+  const isCut   = a.is_cut;
+  const c = DEVICE_COLORS[a.device_type] || '#6e7681';
+
+  document.getElementById('dp-indicator').style.background =
+    offline ? '#3d3d3d' : isCut ? '#f85149' : c;
+  document.getElementById('dp-title').textContent = a.hostname || a.ip;
+  const sub = [a.ip !== (a.hostname||a.ip) ? a.ip : '',
+               (a.vendor||''), (a.device_type||'').replace(/_/g,' ')]
+              .filter(Boolean).join(' · ');
+  document.getElementById('dp-subtitle').textContent = sub;
+
+  // ── quick-action bar wiring ──
+  document.getElementById('dpa-traffic').onclick = () => switchTab('traffic');
+  document.getElementById('dpa-websites').onclick = () => switchTab('websites');
+  document.getElementById('dpa-vulns').onclick    = () => switchTab('info');
+
+  const sniffBtn  = document.getElementById('dpa-sniff');
+  const sniffIcon = document.getElementById('dpa-sniff-icon');
+  const sniffLbl  = document.getElementById('dpa-sniff-lbl');
+  const isSniffing = mitmIPs.has(a.ip);
+  if (isSniffing) {
+    sniffBtn.classList.add('active');
+    sniffIcon.textContent = '🔴'; sniffLbl.textContent = 'Live';
+  } else {
+    sniffBtn.classList.remove('active');
+    sniffIcon.textContent = '👁'; sniffLbl.textContent = 'Sniff';
+  }
+  sniffBtn.onclick = async () => {
+    sniffBtn.disabled = true;
+    const currently = mitmIPs.has(a.ip);
+    const url = currently ? `/api/mitm/stop/${encodeURIComponent(a.ip)}`
+                          : `/api/mitm/start/${encodeURIComponent(a.ip)}`;
+    try {
+      const res = await fetch(url, {method:'POST'});
+      if (!res.ok) { const j = await res.json().catch(()=>{}); toast(j?.detail||'Error','error'); }
+    } catch(e) { toast('Error starting sniff','error'); }
+    sniffBtn.disabled = false;
+  };
+
+  const blockBtn = document.getElementById('dpa-block');
+  const blockIcon = document.getElementById('dpa-block-icon');
+  const blockLbl  = document.getElementById('dpa-block-lbl');
+  if (isCut) {
+    blockBtn.classList.remove('danger'); blockBtn.classList.add('active');
+    blockIcon.textContent = '✓'; blockLbl.textContent = 'Restore';
+  } else {
+    blockBtn.classList.remove('active'); blockBtn.classList.add('danger');
+    blockIcon.textContent = '✕'; blockLbl.textContent = 'Block';
+  }
+  blockBtn.onclick = async () => {
+    blockBtn.disabled = true;
+    const url = isCut ? `/api/control/restore/${encodeURIComponent(a.ip)}`
+                      : `/api/control/cut/${encodeURIComponent(a.ip)}`;
+    try {
+      await fetch(url, {method:'POST'});
+      a.is_cut = isCut ? 0 : 1;
+      toast(isCut ? `Restored: ${a.ip}` : `Blocked: ${a.ip}`, isCut?'success':'warning');
+      renderDetails(a);
+    } catch(e) { toast('Error','error'); }
+    blockBtn.disabled = false;
+  };
+
+  const risk = a.risk_score || 0;
+
+  // ── Info tab ──
+  const evts = (a.events||[]).slice(0,8).map(e => {
+    const t = e.ts ? e.ts.split('T')[1]?.slice(0,5) : '';
+    const joined = e.event_type === 'joined';
+    return `<div class="event-item">
+      <span class="event-time">${t}</span>
+      <span class="event-type${joined?'':' left'}">${joined?'▲ joined':'▼ left'}</span>
+      <span style="color:var(--text2);font-size:10px">${e.detail||''}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pane-info').innerHTML = `
+    <div class="dp-section">
+      <h4>Identity</h4>
+      <div class="dp-grid">
+        <span class="dp-lbl">IP</span><span class="dp-val">${a.ip}</span>
+        ${a.mac?`<span class="dp-lbl">MAC</span><span class="dp-val">${a.mac}</span>`:''}
+        ${a.vendor?`<span class="dp-lbl">Vendor</span><span class="dp-val vendor">${a.vendor}</span>`:''}
+        ${a.hostname?`<span class="dp-lbl">Hostname</span><span class="dp-val">${a.hostname}</span>`:''}
+        ${a.os?`<span class="dp-lbl">OS</span><span class="dp-val">${a.os}</span>`:''}
+        ${a.ssdp_info?`<span class="dp-lbl">SSDP</span><span class="dp-val vendor">${a.ssdp_info}</span>`:''}
+        ${a.http_banner?`<span class="dp-lbl">Banner</span><span class="dp-val vendor">${a.http_banner}</span>`:''}
+        <span class="dp-lbl">Status</span>
+        <span class="dp-val" style="color:${offline?'var(--text3)':isCut?'var(--red)':'var(--green)'}">
+          ${offline?'⬤ offline':isCut?'⬤ blocked':'⬤ online'}
+        </span>
+        ${a.last_seen?`<span class="dp-lbl">Last seen</span>
+          <span class="dp-val">${a.last_seen.replace('T',' ').slice(0,16)}</span>`:''}
+      </div>
+    </div>
+
+    <div class="dp-section">
+      <h4>Risk — ${risk}/100</h4>
+      <div class="risk-bar-wrap">
+        <div style="font-size:10px;color:var(--text3)">${risk<40?'Low':risk<70?'Medium':'High'} risk</div>
+        <div class="risk-bar-bg">
+          <div class="risk-bar-fill" style="width:${risk}%;background:${RISK_COLOR(risk)}"></div>
+        </div>
+      </div>
+    </div>
+
+    ${a.ports?.length?`
+    <div class="dp-section">
+      <h4>Ports (${a.ports.length})</h4>
+      <div class="port-list">
+        ${a.ports.map(p=>`<div class="port-item">
+          <div class="port-dot" style="background:${PORT_COLORS[p.port]||'#6e7681'}"></div>
+          <span class="port-num" style="color:${PORT_COLORS[p.port]||'var(--text2)'}">
+            ${p.port}/${p.protocol}</span>
+          <span class="port-svc">${[p.service,p.product,p.version].filter(Boolean).join(' ')}</span>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+
+    ${a.vulnerabilities?.length?`
+    <div class="dp-section">
+      <h4>Vulnerabilities</h4>
+      ${a.vulnerabilities.map(v=>`<div class="vuln-item">
+        ${v.cve_id?`<div class="vuln-cve">${v.cve_id}</div>`:''}
+        <div>${v.description||''}</div>
+      </div>`).join('')}
+    </div>`:''}
+
+    ${evts?`<div class="dp-section"><h4>Activity</h4><div class="event-list">${evts}</div></div>`:''}
+
+    <div class="dp-section">
+      <h4>Notes</h4>
+      <textarea class="notes" id="dp-notes">${a.notes||''}</textarea>
+    </div>
+    <div class="dp-actions">
+      <button class="btn primary" id="dp-save">Save</button>
+      <button class="btn danger" id="dp-delete">Delete</button>
+    </div>`;
+
+  document.getElementById('dp-save').onclick = async () => {
+    await fetch(`/api/assets/${encodeURIComponent(a.ip)}`,{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({notes:document.getElementById('dp-notes').value})
+    });
+    toast('Saved','success');
+  };
+  document.getElementById('dp-delete').onclick = async () => {
+    if (!confirm(`Delete ${a.ip}?`)) return;
+    await fetch(`/api/assets/${encodeURIComponent(a.ip)}`,{method:'DELETE'});
+    clearSelection(); loadGraph();
+  };
+
+  // ── Traffic tab ──
+  renderTrafficPane(a.ip);
+
+  // ── Websites tab ──
+  renderDnsPane(a.dns_log || [], a.ip);
+
+  // ── Control tab ──
+  renderControlPane(a);
+
+  // restore active tab
+  switchTab(activeTab);
+}
+
+function renderTrafficPane(ip) {
+  const spd = trafficData[ip] || {in:0, out:0, bi:0, bo:0};
+  const maxB = 10 * 1024 * 1024;
+  const pIn  = Math.min(100, (spd.in  / maxB) * 100);
+  const pOut = Math.min(100, (spd.out / maxB) * 100);
+  document.getElementById('pane-traffic').innerHTML = `
+    <div class="dp-section">
+      <h4>Live Bandwidth</h4>
+      <div class="traffic-meter">
+        <div class="traffic-row">
+          <span class="traffic-label">↓ Download</span>
+          <span class="traffic-val in" id="tspd-in-${ip}">${fmtSpeed(spd.in)}/s</span>
+        </div>
+        <div class="traffic-bar">
+          <div class="traffic-bar-fill" id="tbar-in-${ip}" style="width:${pIn}%;background:var(--cyan)"></div>
+        </div>
+        <div class="traffic-row" style="margin-top:8px">
+          <span class="traffic-label">↑ Upload</span>
+          <span class="traffic-val out" id="tspd-out-${ip}">${fmtSpeed(spd.out)}/s</span>
+        </div>
+        <div class="traffic-bar">
+          <div class="traffic-bar-fill" id="tbar-out-${ip}" style="width:${pOut}%;background:var(--green)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dp-section">
+      <h4>Total Session</h4>
+      <div class="dp-grid">
+        <span class="dp-lbl">Downloaded</span>
+        <span class="dp-val" id="ttotal-in-${ip}">${fmtBytes(spd.bi||0)}</span>
+        <span class="dp-lbl">Uploaded</span>
+        <span class="dp-val" id="ttotal-out-${ip}">${fmtBytes(spd.bo||0)}</span>
+      </div>
+    </div>
+    ${!trafficActive?`<div style="color:var(--text3);font-size:10px;margin-top:8px">
+      ⚠ Traffic monitor not active. Click <strong>📊 Traffic</strong> to enable.<br>
+      Requires scapy + admin privileges.
+    </div>`:''}
+    ${mitmIPs.has(ip) ? `
+    <div class="dp-section" style="margin-top:12px">
+      <h4 style="display:flex;align-items:center;gap:8px">
+        Live Intercept
+        <span class="mitm-badge">● SNIFFING</span>
+      </h4>
+      <div class="mitm-feed" id="mitm-feed-${ip}">
+        <div class="mitm-empty">Waiting for traffic…</div>
+      </div>
+    </div>` : `
+    <div class="dp-section" style="margin-top:12px">
+      <div style="color:var(--text3);font-size:10px">
+        👁 Press <strong>Sniff</strong> above to see every connection this device makes<br>
+        (passive MITM — device keeps its internet connection)
+      </div>
+    </div>`}`;
+  if (mitmIPs.has(ip)) loadMITMLog(ip);
+}
+
+function updateTrafficPane(ip) {
+  if (selectedIp !== ip) return;
+  const spd = trafficData[ip] || {in:0, out:0, bi:0, bo:0};
+  const maxB = 10*1024*1024;
+  const el = (id) => document.getElementById(id);
+  if (el(`tspd-in-${ip}`))  el(`tspd-in-${ip}`).textContent  = fmtSpeed(spd.in)+'/s';
+  if (el(`tspd-out-${ip}`)) el(`tspd-out-${ip}`).textContent = fmtSpeed(spd.out)+'/s';
+  if (el(`tbar-in-${ip}`))  el(`tbar-in-${ip}`).style.width  = Math.min(100,(spd.in/maxB)*100)+'%';
+  if (el(`tbar-out-${ip}`)) el(`tbar-out-${ip}`).style.width = Math.min(100,(spd.out/maxB)*100)+'%';
+  if (el(`ttotal-in-${ip}`))  el(`ttotal-in-${ip}`).textContent  = fmtBytes(spd.bi||0);
+  if (el(`ttotal-out-${ip}`)) el(`ttotal-out-${ip}`).textContent = fmtBytes(spd.bo||0);
+}
+
+async function loadMITMLog(ip) {
+  try {
+    const log = await fetch(`/api/mitm/log/${encodeURIComponent(ip)}`).then(r=>r.json());
+    const feed = document.getElementById(`mitm-feed-${ip}`);
+    if (!feed) return;
+    if (!log || log.length === 0) return;
+    feed.innerHTML = '';
+    log.slice(0, 80).forEach(row => {
+      const t = row.ts ? row.ts.split('T')[1]?.slice(0,5) : '';
+      const proto = (row.proto || 'tcp').toLowerCase().replace(/[^a-z]/g,'');
+      const label = row.domain || `${row.dst_ip||''}:${row.dst_port||''}`;
+      let detail = '';
+      if (row.path && row.path !== '/') {
+        detail += `<span class="mitm-http-path">${row.method ? row.method+' ' : ''}${row.path}</span>`;
+      }
+      if (row.referer) {
+        try {
+          const ref = new URL(row.referer);
+          detail += `<span class="mitm-http-referer">← ${ref.hostname}</span>`;
+        } catch(e) {}
+      }
+      const detailHtml = detail ? `<br>${detail}` : '';
+      const entry = document.createElement('div');
+      entry.className = 'mitm-entry';
+      entry.innerHTML = `<span class="mitm-proto mitm-${proto}">${(row.proto||'TCP').toUpperCase()}</span><span class="mitm-domain">${label}${detailHtml}</span><span class="mitm-time">${t}</span>`;
+      feed.appendChild(entry);
+    });
+  } catch(e) {}
+}
+
+function renderDnsPane(dnsLog, ip) {
+  const mitmActive = mitmIPs.has(ip);
+  const mitmBadge = mitmActive
+    ? `<div class="mitm-badge" style="margin-bottom:8px">● SNIFFING — domains update live</div>`
+    : '';
+  if (!dnsLog || dnsLog.length === 0) {
+    document.getElementById('pane-websites').innerHTML = `
+      ${mitmBadge}
+      <div class="dns-empty">No DNS activity captured yet.<br>
+      ${mitmActive
+        ? 'Sniff is active — domains will appear as the device browses.'
+        : 'Press <strong>Sniff</strong> to intercept DNS + TLS SNI in real-time<br>(device keeps its internet connection).'}
+      </div>`;
+    return;
+  }
+  const rows = dnsLog.map(d => {
+    const t = d.ts ? d.ts.split('T')[1]?.slice(0,5) : '';
+    const isSNI = d.qtype === 'TLS-SNI';
+    const isMITM = d.via_mitm;
+    return `<div class="dns-item">
+      <span class="dns-domain">${d.domain}${isMITM?' <span style="color:var(--green);font-size:9px">MITM</span>':''}</span>
+      <span class="dns-type${isSNI?' sni':''}">${d.qtype}</span>
+      <span class="dns-time">${t}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('pane-websites').innerHTML = `
+    ${mitmBadge}
+    <div class="dp-section">
+      <h4>Visited Domains (${dnsLog.length})</h4>
+      ${rows}
+    </div>`;
+}
+
+let _spoofRules = [];
+
+async function renderControlPane(a) {
+  const isCut = a.is_cut;
+  // Fetch spoof rules + server info
+  let spoofInfo = {rules:[], http_port:80, our_ip:''};
+  try { spoofInfo = await fetch('/api/spoof/rules').then(r=>r.json()); } catch(e) {}
+  _spoofRules = spoofInfo.rules || [];
+  const rulesHtml = _spoofRules.length === 0
+    ? `<div class="spoof-empty">No active spoof rules</div>`
+    : _spoofRules.map(r => `
+        <div class="spoof-rule-row" data-domain="${r.domain}">
+          <span class="spoof-rule-domain">${r.domain}</span>
+          <span class="spoof-rule-target">${r.redirect ? '→ '+r.redirect : '📄 custom page'}</span>
+          <button class="spoof-del-btn" title="Remove rule" data-domain="${r.domain}">✕</button>
+        </div>`).join('');
+  const needsMITM = !mitmIPs.has(a.ip)
+    ? `<div class="spoof-warn">⚠ Enable <strong>Sniff</strong> on this device first — DNS spoof needs MITM active</div>`
+    : '';
+
+  document.getElementById('pane-control').innerHTML = `
+    <div class="ctrl-card">
+      <h5>🔌 Internet Access</h5>
+      <p>ARP-spoof this device to block or restore internet access. Requires admin privileges and scapy.</p>
+      ${isCut
+        ? `<button class="btn primary" id="btn-restore-device">✓ Restore Internet</button>`
+        : `<button class="btn danger" id="btn-cut-device">✕ Cut Internet</button>`}
+    </div>
+
+    <div class="ctrl-card spoof-card">
+      <h5>🎯 DNS Spoof / Redirect</h5>
+      <p style="font-size:10px;color:var(--text3);margin-bottom:8px">
+        Intercept DNS queries for a domain and redirect the device to your URL or a custom page.<br>
+        Works for <strong>HTTP</strong> sites. HTTPS sites will show a cert warning.
+      </p>
+      ${needsMITM}
+      <div class="spoof-form">
+        <input class="spoof-input" id="spoof-domain" placeholder="Domain  (e.g. youtube.com or *.ads.com)" />
+        <input class="spoof-input" id="spoof-url"    placeholder="Redirect URL  (e.g. https://mysite.com)" />
+        <div style="font-size:9px;color:var(--text3);margin:2px 0 4px">— or —</div>
+        <textarea class="spoof-input spoof-html" id="spoof-html"
+          placeholder="Custom HTML (optional, leave blank to use URL above)"></textarea>
+        <button class="btn" id="btn-spoof-add" style="margin-top:6px;width:100%">+ Add Spoof Rule</button>
+      </div>
+      <div class="spoof-rules-list" id="spoof-rules-list">${rulesHtml}</div>
+      ${spoofInfo.our_ip ? `<div style="font-size:9px;color:var(--text3);margin-top:6px">
+        HTTP server: <code>${spoofInfo.our_ip}:${spoofInfo.http_port}</code>
+      </div>` : ''}
+    </div>
+
+    <div class="ctrl-card">
+      <h5>🔍 Banner Grab</h5>
+      <p>Probe HTTP/HTTPS ports for server banner and page title.</p>
+      <button class="btn" id="btn-grab-banner">Grab Banner</button>
+    </div>
+    <div class="ctrl-card" style="border-color:var(--border3)">
+      <h5>ℹ️ Device Info</h5>
+      <div class="dp-grid" style="margin-top:4px">
+        <span class="dp-lbl">MAC</span><span class="dp-val">${a.mac||'—'}</span>
+        <span class="dp-lbl">Vendor</span><span class="dp-val vendor">${a.vendor||'—'}</span>
+        <span class="dp-lbl">Type</span><span class="dp-val">${(a.device_type||'unknown').replace(/_/g,' ')}</span>
+        <span class="dp-lbl">First seen</span><span class="dp-val">${(a.first_seen||'—').replace('T',' ').slice(0,16)}</span>
+      </div>
+    </div>`;
+
+  // ── cut / restore ──
+  const btnCut = document.getElementById('btn-cut-device');
+  const btnRes = document.getElementById('btn-restore-device');
+  if (btnCut) btnCut.onclick = async () => {
+    btnCut.textContent = 'Blocking…'; btnCut.disabled = true;
+    try {
+      await fetch(`/api/control/cut/${encodeURIComponent(a.ip)}`,{method:'POST'});
+      a.is_cut = 1; toast(`Blocked: ${a.ip}`,'warning'); renderControlPane(a);
+    } catch(e) { toast('Cut failed','error'); btnCut.textContent='✕ Cut Internet'; btnCut.disabled=false; }
+  };
+  if (btnRes) btnRes.onclick = async () => {
+    btnRes.textContent = 'Restoring…'; btnRes.disabled = true;
+    try {
+      await fetch(`/api/control/restore/${encodeURIComponent(a.ip)}`,{method:'POST'});
+      a.is_cut = 0; toast(`Restored: ${a.ip}`,'success'); renderControlPane(a);
+    } catch(e) { toast('Restore failed','error'); }
+  };
+
+  // ── spoof add ──
+  document.getElementById('btn-spoof-add').onclick = async () => {
+    const domain  = document.getElementById('spoof-domain').value.trim();
+    const url     = document.getElementById('spoof-url').value.trim();
+    const html    = document.getElementById('spoof-html').value.trim();
+    if (!domain) { toast('Enter a domain','error'); return; }
+    if (!url && !html) { toast('Enter a redirect URL or custom HTML','error'); return; }
+    try {
+      const res = await fetch('/api/spoof/rules', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({domain, redirect: url||null, html: html||null})
+      });
+      if (!res.ok) throw new Error(await res.text());
+      document.getElementById('spoof-domain').value = '';
+      document.getElementById('spoof-url').value    = '';
+      document.getElementById('spoof-html').value   = '';
+      toast(`Spoof active: ${domain}`, 'success');
+      renderControlPane(a);
+    } catch(e) { toast('Error: '+e.message, 'error'); }
+  };
+
+  // ── spoof delete ──
+  document.querySelectorAll('.spoof-del-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const d = btn.dataset.domain;
+      try {
+        await fetch(`/api/spoof/rules/${encodeURIComponent(d)}`, {method:'DELETE'});
+        toast(`Removed: ${d}`, 'info'); renderControlPane(a);
+      } catch(e) {}
+    };
+  });
+
+  // ── banner grab ──
+  const btnBanner = document.getElementById('btn-grab-banner');
+  if (btnBanner) btnBanner.onclick = async () => {
+    btnBanner.textContent = 'Grabbing…'; btnBanner.disabled = true;
+    try {
+      const r = await fetch(`/api/assets/${encodeURIComponent(a.ip)}`).then(r=>r.json());
+      toast(`Banner: ${r.http_banner||'(none)'}`, 'info');
+    } catch(e) {} finally { btnBanner.textContent = 'Grab Banner'; btnBanner.disabled = false; }
+  };
+}
+
+function fmtBytes(b) {
+  if (b >= 1073741824) return `${(b/1073741824).toFixed(2)} GB`;
+  if (b >= 1048576)    return `${(b/1048576).toFixed(1)} MB`;
+  if (b >= 1024)       return `${(b/1024).toFixed(0)} KB`;
+  return b + ' B';
+}
+
+// ── graph helpers ─────────────────────────────────────────────────────────────
+function highlightNode(node) {
+  cy.elements().addClass('faded');
+  node.closedNeighborhood().removeClass('faded').addClass('highlighted');
+}
+
+function applyGraphFilter() {
+  const q = document.getElementById('search-box').value.toLowerCase();
+  if (!q) { cy.elements().removeClass('faded'); return; }
+  cy.nodes().forEach(n => {
+    const d = n.data();
+    const hay = [d.ip,d.label,d.hostname,d.vendor,d.os,d.device_type]
+                .filter(Boolean).join(' ').toLowerCase();
+    n.toggleClass('faded', !hay.includes(q));
+  });
+}
+
+// ── data load ─────────────────────────────────────────────────────────────────
+async function loadGraph() {
+  try {
+    const [graphData, assets, mitmStatus] = await Promise.all([
+      fetch('/api/graph').then(r=>r.json()),
+      fetch('/api/assets').then(r=>r.json()),
+      fetch('/api/mitm/status').then(r=>r.json()).catch(()=>({active_ips:[]})),
+    ]);
+    assets.forEach(a => { allAssets[a.ip] = a; });
+    mitmIPs.clear();
+    (mitmStatus.active_ips || []).forEach(ip => mitmIPs.add(ip));
+    renderGraph(graphData);
+    // Apply MITM node style after graph render
+    mitmIPs.forEach(ip => {
+      const node = cy.$(`#${CSS.escape(ip)}`);
+      if (node.length) node.data('is_mitm', true);
+    });
+    renderSidebar(assets);
+    document.getElementById('sb-updated').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) { console.error(e); }
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function setupWS() {
+  const ws  = new WebSocket(`ws://${location.host}/ws`);
+  const dot = document.getElementById('ws-dot');
+  const lbl = document.getElementById('ws-status');
+
+  ws.onopen = () => {
+    dot.className = 'sb-dot green'; lbl.textContent = 'Connected'; wsRetries = 0;
+  };
+  ws.onclose = () => {
+    dot.className = 'sb-dot gray'; lbl.textContent = 'Reconnecting…';
+    setTimeout(setupWS, Math.min(1000 * 2**wsRetries++, 15000));
+  };
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'traffic_update') {
+      Object.assign(trafficData, msg.speeds);
+      renderSidebar(Object.values(allAssets));
+      if (selectedIp) updateTrafficPane(selectedIp);
+      return;
+    }
+
+    if (msg.type === 'device_cut') {
+      if (allAssets[msg.ip]) allAssets[msg.ip].is_cut = 1;
+      const node = cy.$(`#${CSS.escape(msg.ip)}`);
+      if (node.length) node.data('is_cut', true);
+      renderSidebar(Object.values(allAssets));
+      if (selectedIp === msg.ip) { renderControlPane({...allAssets[msg.ip], is_cut:1}); }
+      return;
+    }
+
+    if (msg.type === 'device_restored') {
+      if (allAssets[msg.ip]) allAssets[msg.ip].is_cut = 0;
+      const node = cy.$(`#${CSS.escape(msg.ip)}`);
+      if (node.length) node.data('is_cut', false);
+      renderSidebar(Object.values(allAssets));
+      if (selectedIp === msg.ip) { renderControlPane({...allAssets[msg.ip], is_cut:0}); }
+      return;
+    }
+
+    if (msg.type === 'asset_added' || msg.type === 'asset_up') { loadGraph(); return; }
+
+    if (msg.type === 'device_joined') {
+      const label = msg.hostname || msg.ip;
+      const vendor = msg.vendor ? ` · ${msg.vendor}` : '';
+      toast(`▲ New device: ${label}${vendor}`, 'join');
+      loadGraph();
+      setTimeout(() => {
+        const el = document.getElementById(`si-${msg.ip.replace(/\./g,'_')}`);
+        if (el) el.classList.add('new-device');
+      }, 800);
+      return;
+    }
+    if (msg.type === 'device_left') {
+      toast(`▼ Offline: ${msg.ip}`, 'leave'); loadGraph(); return;
+    }
+    if (msg.type === 'asset_removed' || msg.type === 'cleared') {
+      loadGraph(); return;
+    }
+    if (msg.type === 'scan_progress') {
+      document.getElementById('sb-scan').textContent = `Scanning: ${msg.message||'…'}`;
+    }
+    if (msg.type === 'scan_done') {
+      document.getElementById('sb-scan').textContent = `Done — ${msg.count} devices`;
+      toast(`Scan complete: ${msg.count} devices`, 'success');
+      loadGraph();
+      setTimeout(()=>{ document.getElementById('sb-scan').textContent='Idle'; }, 8000);
+    }
+    if (msg.type === 'scan_error') {
+      document.getElementById('sb-scan').textContent = 'Scan error';
+      toast(`Scan error: ${msg.message}`, 'error');
+    }
+    if (msg.type === 'monitor_started') {
+      setMonitorActive(true, msg.network);
+      toast(`Monitor started: ${msg.network}`, 'info');
+    }
+    if (msg.type === 'monitor_stopped') {
+      setMonitorActive(false, '');
+      toast('Monitor stopped', 'info');
+    }
+
+    if (msg.type === 'mitm_started') {
+      mitmIPs.add(msg.ip);
+      const node = cy.$(`#${CSS.escape(msg.ip)}`);
+      if (node.length) node.data('is_mitm', true);
+      if (selectedIp === msg.ip) renderDetails(allAssets[msg.ip]);
+      toast(`👁 Sniffing: ${msg.ip}`, 'info');
+      return;
+    }
+    if (msg.type === 'mitm_stopped') {
+      mitmIPs.delete(msg.ip);
+      const node = cy.$(`#${CSS.escape(msg.ip)}`);
+      if (node.length) node.data('is_mitm', false);
+      if (selectedIp === msg.ip) renderDetails(allAssets[msg.ip]);
+      toast(`Sniff stopped: ${msg.ip}`, 'info');
+      return;
+    }
+    if (msg.type === 'mitm_live') {
+      const feed = document.getElementById(`mitm-feed-${msg.ip}`);
+      if (feed) {
+        // Clear "waiting" placeholder
+        const empty = feed.querySelector('.mitm-empty');
+        if (empty) empty.remove();
+        const t = msg.ts ? msg.ts.split('T')[1]?.slice(0,5) : '';
+        const proto = (msg.proto || 'tcp').toLowerCase().replace(/[^a-z]/g,'');
+        const protoLabel = (msg.proto||'TCP').toUpperCase();
+        const label = msg.domain || `${msg.dst}:${msg.dport}`;
+        const entry = document.createElement('div');
+        entry.className = 'mitm-entry new';
+        // Build detail line: path for HTTP, nothing extra for DNS/SNI
+        let detail = '';
+        if (msg.path && msg.path !== '/') {
+          detail += `<span class="mitm-http-path">${msg.method ? msg.method+' ' : ''}${msg.path}</span>`;
+        }
+        if (msg.referer) {
+          try {
+            const ref = new URL(msg.referer);
+            detail += `<span class="mitm-http-referer">← ${ref.hostname}</span>`;
+          } catch(e) {}
+        }
+        const detailHtml = detail ? `<br>${detail}` : '';
+        entry.innerHTML = `<span class="mitm-proto mitm-${proto}">${protoLabel}</span><span class="mitm-domain">${label}${detailHtml}</span><span class="mitm-time">${t}</span>`;
+        feed.insertBefore(entry, feed.firstChild);
+        while (feed.children.length > 80) feed.removeChild(feed.lastChild);
+        setTimeout(() => entry.classList.remove('new'), 400);
+      }
+      if (activeTab === 'websites' && selectedIp === msg.ip && msg.domain) {
+        fetch(`/api/dns/${encodeURIComponent(msg.ip)}`).then(r=>r.json())
+          .then(log => renderDnsPane(log, msg.ip)).catch(()=>{});
+      }
+      return;
+    }
+
+    if (msg.type === 'dns_spoofed') {
+      // Show in the live feed as a spoofed entry
+      const feed = document.getElementById(`mitm-feed-${msg.ip}`);
+      if (feed) {
+        const empty = feed.querySelector('.mitm-empty');
+        if (empty) empty.remove();
+        const t = msg.ts ? msg.ts.split('T')[1]?.slice(0,5) : '';
+        const entry = document.createElement('div');
+        entry.className = 'mitm-entry new';
+        entry.innerHTML = `<span class="mitm-proto" style="background:#2a1500;color:#f0a030">SPOOF</span><span class="mitm-domain">${msg.domain}<br><span class="mitm-http-path">→ ${msg.to}</span></span><span class="mitm-time">${t}</span>`;
+        feed.insertBefore(entry, feed.firstChild);
+        while (feed.children.length > 80) feed.removeChild(feed.lastChild);
+        setTimeout(() => entry.classList.remove('new'), 400);
+      }
+      toast(`🎯 Spoofed: ${msg.domain}`, 'warning');
+      return;
+    }
+
+    if (msg.type === 'spoof_updated') {
+      _spoofRules = msg.rules || [];
+      // Refresh control pane if open
+      if (activeTab === 'control' && selectedIp && allAssets[selectedIp]) {
+        renderControlPane(allAssets[selectedIp]);
+      }
+      return;
+    }
+  };
+}
+
+// ── monitor state ─────────────────────────────────────────────────────────────
+function setMonitorActive(active, network) {
+  monitorActive = active; monitorNetwork = network;
+  const btn = document.getElementById('btn-monitor');
+  const lbl = document.getElementById('monitor-label');
+  const sb  = document.getElementById('sb-monitor');
+  const sbn = document.getElementById('sb-monitor-net');
+  const wsd = document.getElementById('ws-dot');
+  if (active) {
+    btn.classList.add('active'); lbl.textContent = 'Monitoring';
+    sb.style.display = 'flex'; sbn.textContent = network;
+    wsd.className = 'sb-dot live';
+  } else {
+    btn.classList.remove('active'); lbl.textContent = 'Monitor';
+    sb.style.display = 'none';
+    wsd.className = 'sb-dot green';
+  }
+}
+
+// ── traffic state ─────────────────────────────────────────────────────────────
+function setTrafficActive(active) {
+  trafficActive = active;
+  const btn = document.getElementById('btn-traffic');
+  const lbl = document.getElementById('traffic-label');
+  const sb  = document.getElementById('sb-traffic-info');
+  if (active) {
+    btn.classList.add('active'); lbl.textContent = 'Traffic ●';
+    sb.style.display = 'inline';
+  } else {
+    btn.classList.remove('active'); lbl.textContent = 'Traffic';
+    sb.style.display = 'none';
+  }
+}
+
+// ── toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(()=>el.remove(), 4000);
+}
+
+// ── modals ────────────────────────────────────────────────────────────────────
+const showModal = id => document.getElementById(id).classList.remove('hidden');
+const hideModal = id => document.getElementById(id).classList.add('hidden');
+
+// ── tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.dp-tab').forEach(t => {
+  t.onclick = () => switchTab(t.dataset.pane);
+});
+
+// ── ARP Scan ──────────────────────────────────────────────────────────────────
+document.getElementById('btn-arp-scan').onclick = async () => {
+  document.getElementById('arp-target').value = await guessLocalNet();
+  showModal('arp-modal');
+};
+document.getElementById('arp-cancel').onclick = () => hideModal('arp-modal');
+document.getElementById('arp-go').onclick = async () => {
+  const network = document.getElementById('arp-target').value.trim();
+  if (!network) return;
+  hideModal('arp-modal');
+  document.getElementById('sb-scan').textContent = `Scanning ${network}…`;
+  toast(`ARP scanning ${network}…`, 'info');
+  try {
+    const r = await fetch('/api/arp-scan',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({network})
+    }).then(r=>r.json());
+    if (r.error) { toast(r.error,'error'); return; }
+    // Poll until done — ensures loadGraph() fires even when WS event is missed
+    const sid = r.scan_id;
+    const poll = async (attempts=0) => {
+      if (attempts > 90) { loadGraph(); return; }
+      try {
+        const s = await fetch(`/api/scans/${sid}`).then(r=>r.json());
+        if (s.status === 'done' || s.status === 'error') {
+          loadGraph();
+          document.getElementById('sb-scan').textContent =
+            s.status === 'done' ? `Done — ${s.assets_found} devices` : 'Scan error';
+          setTimeout(() => { document.getElementById('sb-scan').textContent = 'Idle'; }, 8000);
+        } else {
+          setTimeout(() => poll(attempts + 1), 1000);
+        }
+      } catch(e) { setTimeout(() => poll(attempts + 1), 2000); }
+    };
+    setTimeout(() => poll(), 1000);
+  } catch(e) { toast('Error starting scan','error'); }
+};
+
+// ── Deep Scan ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-nmap-scan').onclick = async () => {
+  document.getElementById('scan-target').value = await guessLocalNet();
+  showModal('scan-modal');
+};
+document.getElementById('scan-cancel').onclick = () => hideModal('scan-modal');
+document.getElementById('scan-go').onclick = async () => {
+  const target = document.getElementById('scan-target').value.trim();
+  if (!target) return;
+  hideModal('scan-modal');
+  document.getElementById('sb-scan').textContent = `Scanning ${target}…`;
+  toast(`Deep scan started: ${target}`, 'info');
+  try {
+    await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({target})});
+  } catch(e) { toast('Error starting scan','error'); }
+};
+
+// ── SSDP ──────────────────────────────────────────────────────────────────────
+document.getElementById('btn-ssdp').onclick = async () => {
+  toast('Discovering SSDP/UPnP devices…','info');
+  document.getElementById('sb-scan').textContent = 'SSDP discovery…';
+  try {
+    const r = await fetch('/api/ssdp',{method:'POST'}).then(r=>r.json());
+    toast(`SSDP: ${r.found} devices found`,'success');
+    loadGraph();
+    document.getElementById('sb-scan').textContent = 'Idle';
+  } catch(e) { toast('SSDP error','error'); }
+};
+
+// ── Traffic ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-traffic').onclick = async () => {
+  if (trafficActive) {
+    await fetch('/api/traffic/stop',{method:'POST'});
+    setTrafficActive(false);
+    toast('Traffic monitor stopped','info');
+  } else {
+    toast('Starting traffic monitor…','info');
+    try {
+      const r = await fetch('/api/traffic/start',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({})
+      }).then(r=>r.json());
+      if (r.running) { setTrafficActive(true); toast('Traffic monitor active','success'); }
+      else toast('Traffic monitor failed — check scapy/admin','error');
+    } catch(e) { toast('Error','error'); }
+  }
+};
+
+// ── Import ────────────────────────────────────────────────────────────────────
+document.getElementById('btn-import').onclick = () => showModal('import-modal');
+document.getElementById('import-cancel').onclick = () => hideModal('import-modal');
+document.getElementById('import-go').onclick = async () => {
+  const path = document.getElementById('import-path').value.trim();
+  if (!path) return;
+  hideModal('import-modal'); toast('Importing…','info');
+  try {
+    const r = await fetch('/api/import',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({path})
+    }).then(r=>r.json());
+    if (r.imported !== undefined) { toast(`Imported ${r.imported} assets`,'success'); loadGraph(); }
+    else toast(r.detail||'Import failed','error');
+  } catch(e) { toast('Import error','error'); }
+};
+
+// ── Monitor ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-monitor').onclick = async () => {
+  if (monitorActive) { await fetch('/api/monitor/stop',{method:'POST'}); }
+  else { document.getElementById('monitor-network').value = await guessLocalNet(); showModal('monitor-modal'); }
+};
+document.getElementById('monitor-cancel').onclick = () => hideModal('monitor-modal');
+document.getElementById('monitor-go').onclick = async () => {
+  const network  = document.getElementById('monitor-network').value.trim();
+  const interval = parseInt(document.getElementById('monitor-interval').value)||30;
+  if (!network) return;
+  hideModal('monitor-modal');
+  try {
+    await fetch('/api/monitor/start',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({network,interval})
+    });
+  } catch(e) { toast('Error starting monitor','error'); }
+};
+
+// ── misc controls ─────────────────────────────────────────────────────────────
+document.getElementById('btn-fit').onclick    = () => cy.fit(undefined,40);
+document.getElementById('btn-export').onclick = () => {
+  cy.png({output:'blob-promise',bg:'#0d1117',scale:2}).then(blob => {
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = `eliya-${Date.now()}.png`;
+    link.click(); URL.revokeObjectURL(url);
+  });
+};
+document.getElementById('btn-clear').onclick = async () => {
+  if (!confirm('Clear all assets from the database?')) return;
+  await fetch('/api/clear',{method:'DELETE'});
+  allAssets = {}; trafficData = {};
+  clearSelection(); loadGraph();
+};
+document.getElementById('dp-close').onclick      = () => clearSelection();
+document.getElementById('dp-backdrop').onclick   = () => clearSelection();
+document.getElementById('layout-select').onchange = e => runLayout(e.target.value);
+
+document.querySelectorAll('.filter-btn').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    activeFilter = b.dataset.filter;
+    renderSidebar(Object.values(allAssets));
+  };
+});
+
+document.getElementById('search-box').addEventListener('input', () => {
+  renderSidebar(Object.values(allAssets));
+  applyGraphFilter();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['arp-modal','scan-modal','import-modal','monitor-modal'].forEach(hideModal);
+    clearSelection();
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    if (!document.getElementById('arp-modal').classList.contains('hidden'))
+      document.getElementById('arp-go').click();
+    else if (!document.getElementById('scan-modal').classList.contains('hidden'))
+      document.getElementById('scan-go').click();
+    else if (!document.getElementById('import-modal').classList.contains('hidden'))
+      document.getElementById('import-go').click();
+    else if (!document.getElementById('monitor-modal').classList.contains('hidden'))
+      document.getElementById('monitor-go').click();
+  }
+});
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+async function guessLocalNet() {
+  if (_detectedNet) return _detectedNet;
+  try {
+    const r = await fetch('/api/local-network').then(r => r.json());
+    if (r.network && !r.network.startsWith('127.')) {
+      _detectedNet = r.network;
+      return _detectedNet;
+    }
+  } catch(e) {}
+  // JS fallback (only useful when not on 127.0.0.1)
+  const h = location.hostname;
+  const m = h.match(/^(\d+\.\d+\.\d+)\.\d+$/);
+  return (m && !h.startsWith('127.')) ? `${m[1]}.0/24` : '192.168.1.0/24';
+}
+
+async function checkMonitorStatus() {
+  try {
+    const s = await fetch('/api/monitor/status').then(r=>r.json());
+    if (s.running) setMonitorActive(true,s.network);
+  } catch(e){}
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+  initGraph();
+  await loadGraph();
+  setupWS();
+  await checkMonitorStatus();
+})();
+</script>
+</body>
+</html>

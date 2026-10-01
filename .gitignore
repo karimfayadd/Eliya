@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+ENV/
+
+# Build / packaging
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Runtime / database — never upload these
+eliya.db
+eliya_*.xml
+*.xml
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log

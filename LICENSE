@@ -1,0 +1,70 @@
+Eliya License v1.0
+Copyright (c) 2024 Karim Fayad (https://github.com/karimfayadd)
+
+All rights reserved.
+
+PERMISSIONS
+-----------
+Permission is granted, free of charge, to any person obtaining a copy of
+this software to use, run, and modify it for the following purposes:
+
+  - Personal use
+  - Educational purposes
+  - Authorized penetration testing and security research
+  - Bug bounty hunting on programs you are enrolled in
+  - CTF (Capture the Flag) competitions
+  - Internal network asset management and visibility
+
+Subject to the conditions below.
+
+CONDITIONS
+----------
+1. ATTRIBUTION REQUIRED
+   Any copy, fork, redistribution, or derivative work must clearly credit:
+
+       Karim Fayad — https://github.com/karimfayadd
+
+   in a prominent location (README, UI, documentation, or about page).
+   The original authorship information embedded in the source code and
+   interface may not be removed, hidden, or altered.
+
+2. SHARE-ALIKE
+   If you modify and distribute this software, your modified version must
+   be released under this same license or a more restrictive one.
+
+3. AUTHORIZED USE ONLY
+   This tool may only be used against networks and systems for which you
+   have explicit written authorization from the owner. Unauthorized use
+   against networks or systems you do not own or have permission to scan
+   is strictly prohibited and is entirely your own legal responsibility.
+
+4. NO COMMERCIAL USE WITHOUT PERMISSION
+   Commercial use — including selling, sublicensing, bundling in a paid
+   product or service, or using in a commercial offering — requires
+   explicit written permission from Karim Fayad.
+
+RESTRICTIONS
+------------
+- You may not remove or alter the credit/attribution to Karim Fayad.
+- You may not claim this software as your own original work.
+- You may not use this software for illegal or unauthorized activities.
+- You may not redistribute this software without including this license.
+
+DISCLAIMER
+----------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY — WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE —
+ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+THE AUTHOR ASSUMES NO RESPONSIBILITY FOR MISUSE OF THIS TOOL. USE IT
+ONLY ON NETWORKS AND SYSTEMS YOU OWN OR HAVE EXPLICIT PERMISSION TO TEST.
+
+---
+
+For commercial licensing inquiries or permissions beyond the scope of
+this license, contact: https://github.com/karimfayadd
