@@ -1966,7 +1966,7 @@ async def ws_endpoint(ws: WebSocket):
 
 # ── Banner & CLI ──────────────────────────────────────────────────────────────
 
-FALLBACK_ART = """
+FALLBACK_ART = r"""
  _____  _ _
 | ____|| (_)_   _  __ _
 |  _|  | | | | | |/ _` |
